@@ -32,12 +32,12 @@ This library enables .NET MAUI applications to leverage Apple's modern StoreKit2
 - ✅ **JSON Representations**: Access raw JSON data for products and transactions
 - ✅ **Async/Await Support**: Modern async programming patterns
 - ✅ **Delegate Pattern**: Event-driven callbacks for purchase and storefront events
-- ✅ **iOS 15+ Support**: Takes advantage of StoreKit2, with iOS 16+ extras
+- ✅ **iOS 15+ Support**: Takes advantage of StoreKit2, with iOS 16+ & 17+ extras
 
 ## Requirements
 
 - **iOS 15.0+** (StoreKit2 requirement)
-- **.NET 8.0** or later
+- **.NET 9.0 / .NET 10.0** or later
 - **MAUI Project** targeting iOS
 
 ## Prerequisites
@@ -63,7 +63,7 @@ dotnet add package StoreKit2
 Or add to your `.csproj` file:
 
 ```xml
-<PackageReference Include="StoreKit2" Version="1.0.1" />
+<PackageReference Include="StoreKit2" Version="2.0.0" />
 ```
 
 ### Manual Installation
@@ -430,8 +430,8 @@ Represents a completed transaction with full details.
 - `IsUpgraded`: Whether this subscription was upgraded
 - `RevocationDate`: Date of revocation or nil
 - `RevocationReason`: Revocation reason or nil
-- `Environment`: App Store environment - iOS 16+ only (sandbox, production, xcode)
-- `Reason`: Transaction reason - iOS 16+ only (purchase, renewal)
+- `Environment`: App Store environment — **iOS 16+** only (sandbox, production, xcode)
+- `Reason`: Transaction reason — **iOS 17+** only (purchase, renewal)
 - `JsonRepresentation`: Raw JSON of the transaction
 
 ### SubscriptionStatusInfo
@@ -497,24 +497,79 @@ The `StructsAndEnums.cs` file provides string constants for easy comparison:
 - `ExpirationReason` — AutoRenewDisabled, BillingError, DidNotConsentToPriceIncrease, ProductUnavailable
 - `PriceIncreaseStatus` — Agreed, NoIncreasePending, Pending
 - `StoreEnvironment` — Sandbox, Production, Xcode (iOS 16+)
-- `TransactionReason` — Purchase, Renewal (iOS 16+)
+- `TransactionReason` — Purchase, Renewal (iOS 17+)
 
 ## Product Types
 
 The library supports all StoreKit2 product types:
 
-- **Consumable**: Products that can be purchased multiple times
-- **Non-Consumable**: Products that are purchased once
-- **Auto-Renewable**: Subscriptions that renew automatically
-- **Non-Renewable**: Subscriptions that don't renew automatically
+| Type | Constant | Description |
+|------|----------|-------------|
+| Consumable | `ProductType.Consumable` | Products that can be purchased multiple times |
+| Non-Consumable | `ProductType.NonConsumable` | Products that are purchased once permanently |
+| Auto-Renewable | `ProductType.AutoRenewable` | Subscriptions that renew automatically |
+| Non-Renewable | `ProductType.NonRenewable` | Subscriptions that don't renew automatically |
+
+## iOS Version Availability
+
+Most APIs require **iOS 15.0+**. Some properties provide additional data on newer versions:
+
+| Feature | Minimum iOS | Notes |
+|---------|-------------|-------|
+| Core StoreKit2 APIs | iOS 15.0 | Products, purchases, transactions, subscriptions |
+| `Transaction.Environment` | iOS 16.0 | Sandbox, Production, Xcode |
+| `RenewalInfo.Environment` | iOS 16.0 | Subscription renewal environment |
+| `RenewalInfo.RenewalDate` | iOS 16.0 | Next renewal date |
+| `Transaction.Reason` | iOS 17.0 | Purchase vs renewal |
+
+Properties unavailable on the running iOS version will return `null`.
 
 ## Error Handling
 
 The library provides comprehensive error handling through:
 
 - Completion callbacks with success/error parameters
-- Delegate methods for handling purchase failures
+- Delegate methods for handling purchase failures and revocations
+- Storefront change notifications
 - Detailed error messages for debugging
+
+## Using Constants
+
+The library provides static string constants for all StoreKit2 enumeration values, making comparison clean and type-safe:
+
+```csharp
+using StoreKit2;
+
+// Check product type
+if (product.ProductType == ProductType.AutoRenewable)
+{
+    // This is a subscription
+}
+
+// Check subscription state
+if (status.State == SubscriptionState.Subscribed)
+{
+    // Active subscription
+}
+
+// Check ownership
+if (transaction.OwnershipType == OwnershipType.FamilyShared)
+{
+    // Family shared purchase
+}
+
+// Check environment (iOS 16+)
+if (transaction.Environment == StoreEnvironment.Sandbox)
+{
+    // Running in sandbox
+}
+
+// Check offer payment mode
+if (product.IntroductoryOffer?.PaymentMode == PaymentMode.FreeTrial)
+{
+    // Free trial offer
+}
+```
 
 ## Testing
 
