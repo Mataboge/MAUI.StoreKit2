@@ -12,12 +12,27 @@ This library enables .NET MAUI applications to leverage Apple's modern StoreKit2
 
 - ✅ **Product Information Retrieval**: Fetch product details from the App Store
 - ✅ **Purchase Processing**: Handle consumable, non-consumable, and subscription purchases
+- ✅ **Purchase with Options**: Support for quantity, app account tokens, and Ask to Buy simulation
 - ✅ **Purchase Restoration**: Restore previous purchases for users
 - ✅ **Transaction Verification**: Built-in transaction verification using StoreKit2
 - ✅ **Purchase Status Checking**: Check the current entitlement status of products
+- ✅ **Current Entitlements**: Retrieve all active entitlements at once
+- ✅ **Transaction History**: Access the complete transaction history
+- ✅ **Latest Transaction**: Get the most recent transaction for any product
+- ✅ **Unfinished Transactions**: Retrieve and finish pending transactions
+- ✅ **Subscription Status**: Check detailed subscription status including renewal info
+- ✅ **Subscription Offers**: Access introductory and promotional offer details
+- ✅ **Intro Offer Eligibility**: Check if a user is eligible for an introductory offer
+- ✅ **Manage Subscriptions UI**: Present the App Store subscription management sheet
+- ✅ **Refund Requests**: Initiate refund requests through the App Store
+- ✅ **Storefront Detection**: Get current storefront and listen for changes
+- ✅ **Family Sharing**: Detect family-shared purchases
+- ✅ **Revocation Detection**: Automatic detection and notification of revoked transactions
+- ✅ **Rich Transaction Data**: Original transaction IDs, expiration dates, offer details, environment info
+- ✅ **JSON Representations**: Access raw JSON data for products and transactions
 - ✅ **Async/Await Support**: Modern async programming patterns
-- ✅ **Delegate Pattern**: Event-driven callbacks for purchase events
-- ✅ **iOS 15+ Support**: Takes advantage of the latest StoreKit2 features
+- ✅ **Delegate Pattern**: Event-driven callbacks for purchase and storefront events
+- ✅ **iOS 15+ Support**: Takes advantage of StoreKit2, with iOS 16+ extras
 
 ## Requirements
 
@@ -82,6 +97,9 @@ public class PaymentManagerDelegateImpl : PaymentManagerDelegate
     public override void PaymentManagerDidFinishPurchase(string productId, PaymentTransaction transaction)
     {
         Console.WriteLine($"Purchase completed: {productId}");
+        Console.WriteLine($"  Transaction ID: {transaction.TransactionId}");
+        Console.WriteLine($"  Original Transaction ID: {transaction.OriginalTransactionId}");
+        Console.WriteLine($"  Ownership: {transaction.OwnershipType}");
         // Handle successful purchase
     }
 
@@ -93,14 +111,36 @@ public class PaymentManagerDelegateImpl : PaymentManagerDelegate
 
     public override void PaymentManagerDidUpdateProducts(PaymentProduct[] products)
     {
-        Console.WriteLine($"Products loaded: {products.Length}");
-        // Update UI with product information
+        foreach (var product in products)
+        {
+            Console.WriteLine($"Product: {product.DisplayName} - {product.DisplayPrice}");
+            if (product.SubscriptionPeriod != null)
+            {
+                Console.WriteLine($"  Subscription: {product.SubscriptionPeriod.Value} {product.SubscriptionPeriod.Unit}");
+            }
+            if (product.IntroductoryOffer != null)
+            {
+                Console.WriteLine($"  Intro Offer: {product.IntroductoryOffer.DisplayPrice} ({product.IntroductoryOffer.PaymentMode})");
+            }
+        }
     }
 
     public override void PaymentManagerDidRestorePurchases(PaymentTransaction[] transactions)
     {
         Console.WriteLine($"Restored {transactions.Length} purchases");
         // Handle restored purchases
+    }
+
+    public override void PaymentManagerDidDetectStorefrontChange(StorefrontInfo storefront)
+    {
+        Console.WriteLine($"Storefront changed: {storefront.CountryCode}");
+        // Re-fetch products if needed for new pricing
+    }
+
+    public override void PaymentManagerTransactionRevoked(string productId, string reason)
+    {
+        Console.WriteLine($"Transaction revoked: {productId}, reason: {reason}");
+        // Revoke access to the product
     }
 }
 ```
@@ -173,25 +213,179 @@ paymentManager.CheckPurchaseStatusWithProductId("com.yourapp.product1", (hasPurc
 });
 ```
 
+### 7. Get All Current Entitlements
+
+```csharp
+paymentManager.GetCurrentEntitlements((transactions) =>
+{
+    foreach (var t in transactions)
+    {
+        Console.WriteLine($"Entitled: {t.ProductId} (type: {t.ProductType}, ownership: {t.OwnershipType})");
+    }
+});
+```
+
+### 8. Check Subscription Status
+
+```csharp
+paymentManager.GetSubscriptionStatus("com.yourapp.subscription", (success, statuses, error) =>
+{
+    if (success && statuses != null)
+    {
+        foreach (var status in statuses)
+        {
+            Console.WriteLine($"Subscription state: {status.State}");
+            if (status.RenewalInfo != null)
+            {
+                Console.WriteLine($"  Will auto-renew: {status.RenewalInfo.WillAutoRenew}");
+                Console.WriteLine($"  Current product: {status.RenewalInfo.CurrentProductId}");
+                Console.WriteLine($"  In billing retry: {status.RenewalInfo.IsInBillingRetry}");
+            }
+            if (status.Transaction != null)
+            {
+                Console.WriteLine($"  Expires: {status.Transaction.ExpirationDate}");
+            }
+        }
+    }
+});
+```
+
+### 9. Check Introductory Offer Eligibility
+
+```csharp
+paymentManager.CheckEligibleForIntroOffer("com.yourapp.subscription", (eligible) =>
+{
+    Console.WriteLine($"Eligible for intro offer: {eligible}");
+});
+```
+
+### 10. Show Manage Subscriptions
+
+```csharp
+paymentManager.ShowManageSubscriptions((success, error) =>
+{
+    if (!success)
+        Console.WriteLine($"Failed to show manage subscriptions: {error}");
+});
+```
+
+### 11. Request a Refund
+
+```csharp
+paymentManager.BeginRefundRequest("123456789", (success, status) =>
+{
+    Console.WriteLine($"Refund request: {status}"); // "success" or "userCancelled"
+});
+```
+
+### 12. Get Transaction History
+
+```csharp
+paymentManager.GetTransactionHistory((transactions) =>
+{
+    Console.WriteLine($"Total transactions: {transactions.Count}");
+    foreach (var t in transactions)
+    {
+        Console.WriteLine($"  {t.ProductId}: {t.PurchaseDate} (env: {t.Environment ?? "unknown"})");
+    }
+});
+```
+
+### 13. Get Storefront Info
+
+```csharp
+paymentManager.GetCurrentStorefront((storefront) =>
+{
+    if (storefront != null)
+    {
+        Console.WriteLine($"Storefront: {storefront.CountryCode} (ID: {storefront.StorefrontId})");
+    }
+});
+```
+
+### 14. Purchase with Options (Consumable Quantity, Ask to Buy)
+
+```csharp
+paymentManager.PurchaseProductWithOptions("com.yourapp.coins100", null, 3, false, (success, transaction, error) =>
+{
+    if (success && transaction != null)
+    {
+        Console.WriteLine($"Purchased {transaction.Quantity}x {transaction.ProductId}");
+    }
+});
+```
+
+### 15. Handle Unfinished Transactions
+
+```csharp
+paymentManager.GetUnfinishedTransactions((transactions) =>
+{
+    Console.WriteLine($"Unfinished transactions: {transactions.Count}");
+});
+
+// Or finish them all at once
+paymentManager.FinishAllTransactions((count) =>
+{
+    Console.WriteLine($"Finished {count} transactions");
+});
+```
+
 ## API Reference
 
 ### PaymentManager
 
-The main class for handling in-app purchases.
+The main class for handling in-app purchases. Access via `PaymentManager.Shared`.
 
 #### Properties
 
 - `Shared`: Static singleton instance
-- `Delegate`: Delegate for receiving purchase events
+- `Delegate`: Delegate for receiving purchase and storefront events
 
-#### Methods
+#### Product Methods
 
-- `RequestProductsWithProductIds()`: Load product information from the App Store
-- `PurchaseProductWithProductId()`: Initiate a purchase for a specific product
-- `RestorePurchasesWithCompletion()`: Restore previous purchases
-- `GetProductWithProductId()`: Get product information by ID
+- `RequestProductsWithProductIds(productIds, completion)`: Load product information from the App Store
+- `GetProductWithProductId(productId)`: Get cached product information by ID
 - `AllProducts`: Get all loaded products
-- `CheckPurchaseStatusWithProductId()`: Check if user owns a specific product
+
+#### Purchase Methods
+
+- `PurchaseProductWithProductId(productId, appAccountToken, completion)`: Purchase a product
+- `PurchaseProductWithOptions(productId, appAccountToken, quantity, simulateAskToBuy, completion)`: Purchase with advanced options (returns transaction)
+- `RestorePurchasesWithCompletion(completion)`: Restore previous purchases via `AppStore.sync()`
+
+#### Entitlement & Status Methods
+
+- `CheckPurchaseStatusWithProductId(productId, completion)`: Check if user is entitled to a product
+- `GetCurrentEntitlements(completion)`: Get all current active entitlements
+
+#### Transaction Methods
+
+- `GetTransactionHistory(completion)`: Get full transaction history
+- `GetLatestTransaction(productId, completion)`: Get the latest transaction for a product
+- `GetUnfinishedTransactions(completion)`: Get transactions that haven't been finished
+- `FinishAllTransactions(completion)`: Finish all unfinished transactions
+
+#### Subscription Methods
+
+- `GetSubscriptionStatus(productId, completion)`: Get detailed subscription status and renewal info
+- `CheckEligibleForIntroOffer(productId, completion)`: Check introductory offer eligibility
+- `ShowManageSubscriptions(completion)`: Present the App Store manage subscriptions sheet
+
+#### Other Methods
+
+- `BeginRefundRequest(transactionId, completion)`: Initiate a refund request
+- `GetCurrentStorefront(completion)`: Get current App Store storefront
+
+### PaymentManagerDelegate
+
+All delegate methods are optional.
+
+- `PaymentManagerDidFinishPurchase(productId, transaction)`: Purchase succeeded
+- `PaymentManagerDidFailPurchase(productId, error)`: Purchase failed
+- `PaymentManagerDidUpdateProducts(products)`: Products fetched
+- `PaymentManagerDidRestorePurchases(transactions)`: Purchases restored
+- `PaymentManagerDidDetectStorefrontChange(storefront)`: Storefront changed
+- `PaymentManagerTransactionRevoked(productId, reason)`: Transaction revoked (refund/family sharing)
 
 ### PaymentProduct
 
@@ -203,21 +397,107 @@ Represents a product available for purchase.
 - `DisplayName`: Localized product name
 - `ProductDescription`: Localized product description
 - `Price`: Product price as NSDecimalNumber
-- `DisplayPrice`: Formatted price string
-- `ProductType`: Product type (consumable, nonConsumable, etc.)
+- `DisplayPrice`: Formatted price string (e.g., "$4.99")
+- `ProductType`: Product type (consumable, nonConsumable, autoRenewable, nonRenewable)
+- `IsFamilyShareable`: Whether the product supports Family Sharing
+- `SubscriptionGroupID`: Subscription group ID (nil for non-subscriptions)
+- `SubscriptionPeriod`: Period info with `Unit` and `Value` (nil for non-subscriptions)
+- `IntroductoryOffer`: Introductory offer details (nil if none)
+- `PromotionalOffers`: Array of promotional offers
+- `JsonRepresentation`: Raw JSON from the App Store
 
 ### PaymentTransaction
 
-Represents a completed transaction.
+Represents a completed transaction with full details.
 
 #### Properties
 
 - `TransactionId`: Unique transaction identifier
+- `OriginalTransactionId`: Original transaction ID (same for renewals)
 - `ProductId`: Associated product identifier
-- `PurchaseDate`: Date of purchase
-- `IsUpgraded`: Whether this is an upgrade transaction
-- `RevocationDate`: Date of revocation (if applicable)
-- `RevocationReason`: Reason for revocation (if applicable)
+- `ProductType`: Product type string
+- `AppBundleID`: The app's bundle ID
+- `PurchaseDate`: Date of this purchase
+- `OriginalPurchaseDate`: Date of the original purchase
+- `ExpirationDate`: Subscription expiration date (nil for non-subscriptions)
+- `SignedDate`: Date the JWS was signed
+- `Quantity`: Number of items purchased
+- `OwnershipType`: "purchased" or "familyShared"
+- `OfferType`: Applied offer type (introductory, promotional, code) or nil
+- `OfferId`: Applied offer identifier or nil
+- `StorefrontCountryCode`: Country code at time of purchase
+- `SubscriptionGroupID`: Subscription group ID or nil
+- `IsUpgraded`: Whether this subscription was upgraded
+- `RevocationDate`: Date of revocation or nil
+- `RevocationReason`: Revocation reason or nil
+- `Environment`: App Store environment - iOS 16+ only (sandbox, production, xcode)
+- `Reason`: Transaction reason - iOS 16+ only (purchase, renewal)
+- `JsonRepresentation`: Raw JSON of the transaction
+
+### SubscriptionStatusInfo
+
+Represents the current state of an auto-renewable subscription.
+
+#### Properties
+
+- `State`: Current state (subscribed, expired, inBillingRetryPeriod, inGracePeriod, revoked)
+- `RenewalInfo`: Detailed renewal information (`SubscriptionRenewalInfo`)
+- `Transaction`: The latest transaction for this subscription
+
+### SubscriptionRenewalInfo
+
+Detailed renewal information for a subscription.
+
+#### Properties
+
+- `OriginalTransactionId`: Original transaction identifier
+- `CurrentProductId`: Product the subscription renews to
+- `WillAutoRenew`: Whether auto-renewal is enabled
+- `AutoRenewPreference`: Product ID the user chose to renew to
+- `ExpirationReason`: Why the subscription expired (if applicable)
+- `IsInBillingRetry`: Whether billing is being retried
+- `GracePeriodExpirationDate`: Grace period end date (if applicable)
+- `OfferType`: Currently applied offer type
+- `OfferId`: Currently applied offer identifier
+- `PriceIncreaseStatus`: Price increase consent (agreed, noIncreasePending, pending)
+- `Environment`: Store environment - iOS 16+ only
+- `RenewalDate`: Next renewal date - iOS 16+ only
+
+### SubscriptionPeriodInfo
+
+- `Unit`: Period unit (day, week, month, year)
+- `Value`: Number of units
+
+### SubscriptionOfferInfo
+
+- `OfferId`: Offer identifier (nil for introductory)
+- `OfferType`: Offer type (introductory, promotional)
+- `Price`: Offer price
+- `DisplayPrice`: Formatted offer price
+- `Period`: Period info (`SubscriptionPeriodInfo`)
+- `PeriodCount`: Number of periods
+- `PaymentMode`: Payment mode (freeTrial, payAsYouGo, payUpFront)
+
+### StorefrontInfo
+
+- `StorefrontId`: App Store storefront identifier
+- `CountryCode`: ISO country code
+
+### Constants
+
+The `StructsAndEnums.cs` file provides string constants for easy comparison:
+
+- `ProductType` — Consumable, NonConsumable, AutoRenewable, NonRenewable
+- `SubscriptionState` — Subscribed, Expired, InBillingRetryPeriod, InGracePeriod, Revoked
+- `SubscriptionPeriodUnit` — Day, Week, Month, Year
+- `OfferType` — Introductory, Promotional, Code
+- `PaymentMode` — FreeTrial, PayAsYouGo, PayUpFront
+- `OwnershipType` — Purchased, FamilyShared
+- `RevocationReason` — DeveloperIssue, Other
+- `ExpirationReason` — AutoRenewDisabled, BillingError, DidNotConsentToPriceIncrease, ProductUnavailable
+- `PriceIncreaseStatus` — Agreed, NoIncreasePending, Pending
+- `StoreEnvironment` — Sandbox, Production, Xcode (iOS 16+)
+- `TransactionReason` — Purchase, Renewal (iOS 16+)
 
 ## Product Types
 

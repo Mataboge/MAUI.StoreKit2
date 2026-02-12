@@ -1,10 +1,11 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 6.1.2 effective-5.10 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)
-// swift-module-flags: -target arm64-apple-ios15.6 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -module-name StoreKit2Framework
-// swift-module-flags-ignorable: -no-verify-emitted-module-interface -interface-compiler-version 6.1.2
+// swift-compiler-version: Apple Swift version 6.2.3 effective-5.10 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+// swift-module-flags: -target arm64-apple-ios15.6 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -Onone -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -module-name StoreKit2Framework
+// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
 import Foundation
 import StoreKit
 import Swift
+import UIKit
 import _Concurrency
 import _StringProcessing
 import _SwiftConcurrencyShims
@@ -14,6 +15,59 @@ import _SwiftConcurrencyShims
   @objc optional func paymentManagerDidFailPurchase(_ productId: Swift.String, error: Swift.String)
   @objc optional func paymentManagerDidUpdateProducts(_ products: [StoreKit2Framework.PaymentProduct])
   @objc optional func paymentManagerDidRestorePurchases(_ transactions: [StoreKit2Framework.PaymentTransaction])
+  @objc optional func paymentManagerDidDetectStorefrontChange(_ storefront: StoreKit2Framework.StorefrontInfo)
+  @objc optional func paymentManagerTransactionRevoked(_ productId: Swift.String, reason: Swift.String)
+}
+@available(iOS 15.0, *)
+@objc public class SubscriptionPeriodInfo : ObjectiveC.NSObject {
+  @objc final public let unit: Swift.String
+  @objc final public let value: Swift.Int
+  public init(period: StoreKit.Product.SubscriptionPeriod)
+  @objc deinit
+}
+@available(iOS 15.0, *)
+@objc public class SubscriptionOfferInfo : ObjectiveC.NSObject {
+  @objc final public let offerId: Swift.String?
+  @objc final public let offerType: Swift.String
+  @objc final public let price: Foundation.NSDecimalNumber
+  @objc final public let displayPrice: Swift.String
+  @objc final public let period: StoreKit2Framework.SubscriptionPeriodInfo
+  @objc final public let periodCount: Swift.Int
+  @objc final public let paymentMode: Swift.String
+  public init(offer: StoreKit.Product.SubscriptionOffer)
+  @objc deinit
+}
+@available(iOS 15.0, *)
+@objc public class SubscriptionRenewalInfo : ObjectiveC.NSObject {
+  @objc final public let originalTransactionId: Swift.String
+  @objc final public let currentProductId: Swift.String
+  @objc final public let willAutoRenew: Swift.Bool
+  @objc final public let autoRenewPreference: Swift.String?
+  @objc final public let expirationReason: Swift.String?
+  @objc final public let isInBillingRetry: Swift.Bool
+  @objc final public let gracePeriodExpirationDate: Foundation.Date?
+  @objc final public let offerType: Swift.String?
+  @objc final public let offerId: Swift.String?
+  @objc final public let priceIncreaseStatus: Swift.String
+  @objc final public let environment: Swift.String?
+  @objc final public let renewalDate: Foundation.Date?
+  public init(renewalInfo: StoreKit.Product.SubscriptionInfo.RenewalInfo)
+  @objc deinit
+}
+@available(iOS 15.0, *)
+@objc public class SubscriptionStatusInfo : ObjectiveC.NSObject {
+  @objc final public let state: Swift.String
+  @objc final public let renewalInfo: StoreKit2Framework.SubscriptionRenewalInfo?
+  @objc final public let transaction: StoreKit2Framework.PaymentTransaction?
+  public init(status: StoreKit.Product.SubscriptionInfo.Status)
+  @objc deinit
+}
+@available(iOS 15.0, *)
+@objc public class StorefrontInfo : ObjectiveC.NSObject {
+  @objc final public let storefrontId: Swift.String
+  @objc final public let countryCode: Swift.String
+  public init(storefront: StoreKit.Storefront)
+  @objc deinit
 }
 @available(iOS 15.0, *)
 @objc public class PaymentProduct : ObjectiveC.NSObject {
@@ -23,17 +77,38 @@ import _SwiftConcurrencyShims
   @objc final public let price: Foundation.NSDecimalNumber
   @objc final public let displayPrice: Swift.String
   @objc final public let productType: Swift.String
+  @objc final public let isFamilyShareable: Swift.Bool
+  @objc final public let subscriptionGroupID: Swift.String?
+  @objc final public let subscriptionPeriod: StoreKit2Framework.SubscriptionPeriodInfo?
+  @objc final public let introductoryOffer: StoreKit2Framework.SubscriptionOfferInfo?
+  @objc final public let promotionalOffers: [StoreKit2Framework.SubscriptionOfferInfo]
+  @objc final public let jsonRepresentation: Swift.String
   public init(product: StoreKit.Product)
   @objc deinit
 }
 @available(iOS 15.0, *)
 @objc public class PaymentTransaction : ObjectiveC.NSObject {
   @objc final public let transactionId: Swift.String
+  @objc final public let originalTransactionId: Swift.String
   @objc final public let productId: Swift.String
+  @objc final public let productType: Swift.String
+  @objc final public let appBundleID: Swift.String
   @objc final public let purchaseDate: Foundation.Date
+  @objc final public let originalPurchaseDate: Foundation.Date
+  @objc final public let expirationDate: Foundation.Date?
+  @objc final public let signedDate: Foundation.Date
+  @objc final public let quantity: Swift.Int
+  @objc final public let ownershipType: Swift.String
+  @objc final public let offerType: Swift.String?
+  @objc final public let offerId: Swift.String?
+  @objc final public let storefrontCountryCode: Swift.String
+  @objc final public let subscriptionGroupID: Swift.String?
   @objc final public let isUpgraded: Swift.Bool
   @objc final public let revocationDate: Foundation.Date?
   @objc final public let revocationReason: Swift.String?
+  @objc final public let environment: Swift.String?
+  @objc final public let reason: Swift.String?
+  @objc final public let jsonRepresentation: Swift.String
   public init(transaction: StoreKit.Transaction)
   @objc deinit
 }
@@ -42,10 +117,43 @@ import _SwiftConcurrencyShims
   @objc public static let shared: StoreKit2Framework.PaymentManager
   @objc weak public var delegate: (any StoreKit2Framework.PaymentManagerDelegate)?
   @objc deinit
+  #if compiler(>=5.3) && $NonescapableTypes
   @objc public func requestProducts(productIds: [Swift.String], completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
-  @objc public func purchaseProduct(productId: Swift.String, appAccountToken: Foundation.UUID? = nil, completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
-  @objc public func restorePurchases(completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
   @objc public func getProduct(productId: Swift.String) -> StoreKit2Framework.PaymentProduct?
+  #endif
   @objc public func getAllProducts() -> [StoreKit2Framework.PaymentProduct]
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func purchaseProduct(productId: Swift.String, appAccountToken: Foundation.UUID? = nil, completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func purchaseProductWithOptions(productId: Swift.String, appAccountToken: Foundation.UUID?, quantity: Swift.Int, simulateAskToBuy: Swift.Bool, completion: @escaping (Swift.Bool, StoreKit2Framework.PaymentTransaction?, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func restorePurchases(completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
   @objc public func checkPurchaseStatus(productId: Swift.String, completion: @escaping (Swift.Bool, StoreKit2Framework.PaymentTransaction?) -> Swift.Void)
+  #endif
+  @objc public func getCurrentEntitlements(completion: @escaping ([StoreKit2Framework.PaymentTransaction]) -> Swift.Void)
+  @objc public func getTransactionHistory(completion: @escaping ([StoreKit2Framework.PaymentTransaction]) -> Swift.Void)
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func getLatestTransaction(productId: Swift.String, completion: @escaping (StoreKit2Framework.PaymentTransaction?) -> Swift.Void)
+  #endif
+  @objc public func getUnfinishedTransactions(completion: @escaping ([StoreKit2Framework.PaymentTransaction]) -> Swift.Void)
+  @objc public func finishAllTransactions(completion: @escaping (Swift.Int) -> Swift.Void)
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func getSubscriptionStatus(productId: Swift.String, completion: @escaping (Swift.Bool, [StoreKit2Framework.SubscriptionStatusInfo]?, Swift.String?) -> Swift.Void)
+  #endif
+  @objc public func checkEligibleForIntroOffer(productId: Swift.String, completion: @escaping (Swift.Bool) -> Swift.Void)
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func showManageSubscriptions(completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func beginRefundRequest(transactionId: Swift.String, completion: @escaping (Swift.Bool, Swift.String?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @objc public func getCurrentStorefront(completion: @escaping (StoreKit2Framework.StorefrontInfo?) -> Swift.Void)
+  #endif
 }
